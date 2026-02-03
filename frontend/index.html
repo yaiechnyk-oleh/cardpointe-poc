@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardPointe Tokenization PoC</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>💳 CardPointe Tokenization PoC</h1>
+      <p class="subtitle">M1.1: Frontend Card Tokenization Demo</p>
+    </header>
+
+    <main>
+      <section class="card-section">
+        <h2>Enter Card Details</h2>
+        <p class="info">Card data is entered directly in the secure CardPointe iFrame. Your server never sees the raw
+          card number.</p>
+
+        <div class="form-group">
+          <label>Card Number, Expiry & CVV</label>
+          <div class="iframe-container">
+            <iframe id="tokenFrame" name="tokenFrame"
+              src="https://fts-uat.cardconnect.com/itoke/ajax-tokenizer.html?useexpiry=true&usecvv=true&cardnumbernumericonly=true&placeholder=Card Number&placeholdercvv=CVV&invalidcreditcardevent=true&enhancedresponse=true&formatinput=true&tokenizewheninactive=false&inactivityto=2000&css=*%7Bbox-sizing%3Aborder-box%3Bmargin%3A0%3Bpadding%3A0%7Dbody%7Bmargin%3A0%3Bpadding%3A0%3Bfont-family%3Asystem-ui%2Csans-serif%3Bbackground%3Atransparent%7D%23tokenform%7Bdisplay%3Aflex%3Bflex-flow%3Arow%20nowrap%3Balign-items%3Acenter%3Bjustify-content%3Acenter%3Bpadding%3A10px%3Bwidth%3A100%25%7D%23tokenform%3E*%7Bdisplay%3Acontents%7Dlabel%7Bdisplay%3Anone%21important%7Dinput%5Btype%3Dtel%5D%2Cinput%5Btype%3Dpassword%5D%2Cselect%7Bdisplay%3Aflex%21important%3Bpadding%3A12px%3Bfont-size%3A14px%3Bborder%3A2px%20solid%20%233b82f6%3Bborder-radius%3A8px%3Bbackground%3A%231e293b%3Bcolor%3A%23f1f5f9%3Boutline%3Anone%3Bmargin-left%3A10px%7Dinput%5Btype%3Dtel%5D%3Afirst-of-type%7Bmargin-left%3A0%3Bflex%3A1%201%20auto%3Bmin-width%3A140px%7Dinput%3Afocus%2Cselect%3Afocus%7Bborder-color%3A%238b5cf6%3Bbox-shadow%3A0%200%200%203px%20rgba%28139%2C92%2C246%2C0.3%29%7Dinput%3A%3Aplaceholder%7Bcolor%3A%2364748b%7Dselect%7Bwidth%3A70px%3Bcursor%3Apointer%3B-webkit-appearance%3Anone%3Bappearance%3Anone%7D%23cccvvfield%7Bwidth%3A70px%7Dselect%20option%7Bbackground%3A%231e293b%3Bcolor%3A%23f1f5f9%7Dinput%5Btype%3Dhidden%5D%2Cinput%5Bstyle*%3Dnone%5D%7Bdisplay%3Anone%21important%3Bmargin%3A0%21important%7D"
+              frameborder="0" scrolling="no">
+            </iframe>
+          </div>
+        </div>
+
+        <button id="tokenizeBtn" class="btn-primary" onclick="getToken()">
+          🔐 Tokenize Card
+        </button>
+      </section>
+
+      <section class="result-section" id="resultSection">
+        <h2>Tokenization Result</h2>
+        <div id="resultContent">
+          <p class="waiting">Waiting for tokenization...</p>
+        </div>
+      </section>
+
+      <section class="info-section">
+        <h3>ℹ️ How It Works</h3>
+        <ol>
+          <li>Card data is entered in the <strong>secure CardPointe iFrame</strong></li>
+          <li>When you click "Tokenize", the iFrame sends the card data directly to CardPointe</li>
+          <li>CardPointe returns a <strong>token</strong> that represents the card</li>
+          <li>Your application receives only the token - never the actual card number</li>
+          <li>Use this token for payment processing via the CardPointe Gateway API</li>
+        </ol>
+      </section>
+
+      <section class="test-cards">
+        <h3>🧪 Test Card Numbers</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Card Type</th>
+              <th>Number</th>
+              <th>Expiry</th>
+              <th>CVV</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Visa</td>
+              <td><code>4111 1111 1111 1111</code></td>
+              <td>12/27</td>
+              <td>123</td>
+            </tr>
+            <tr>
+              <td>Mastercard</td>
+              <td><code>5454 5454 5454 5454</code></td>
+              <td>12/27</td>
+              <td>123</td>
+            </tr>
+            <tr>
+              <td>Amex</td>
+              <td><code>3400 000000 00009</code></td>
+              <td>12/27</td>
+              <td>1234</td>
+            </tr>
+            <tr>
+              <td>Discover</td>
+              <td><code>6011 0000 0000 0004</code></td>
+              <td>12/27</td>
+              <td>123</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      <p>CardPointe PoC - Phase 1 | UAT Environment</p>
+    </footer>
+  </div>
+
+  <script>
+    // Listen for messages from the tokenizer iFrame
+    window.addEventListener('message', function (event) {
+      // Only accept messages from CardPointe
+      if (event.origin.indexOf('cardconnect.com') === -1) {
+        return;
+      }
+
+      console.log('📥 Received message from iFrame:', event.data);
+
+      // Parse the response
+      let response;
+      try {
+        if (typeof event.data === 'string') {
+          response = JSON.parse(event.data);
+        } else {
+          response = event.data;
+        }
+      } catch (e) {
+        // Handle non-JSON messages (validation events)
+        console.log('Validation event:', event.data);
+        return;
+      }
+
+      displayResult(response);
+    }, false);
+
+    // Request token from the iFrame
+    function getToken() {
+      const tokenFrame = document.getElementById('tokenFrame');
+
+      // Post message to iFrame requesting tokenization
+      tokenFrame.contentWindow.postMessage('getToken', 'https://fts-uat.cardconnect.com');
+
+      // Update button state
+      const btn = document.getElementById('tokenizeBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Tokenizing...';
+
+      // Reset after timeout if no response
+      setTimeout(function () {
+        btn.disabled = false;
+        btn.textContent = '🔐 Tokenize Card';
+      }, 5000);
+    }
+
+    // Display the tokenization result
+    function displayResult(response) {
+      const resultContent = document.getElementById('resultContent');
+      const resultSection = document.getElementById('resultSection');
+      const btn = document.getElementById('tokenizeBtn');
+
+      // Reset button
+      btn.disabled = false;
+      btn.textContent = '🔐 Tokenize Card';
+
+      // Get error code (could be errorCode or errorcode)
+      const errorCode = response.errorCode !== undefined ? response.errorCode : response.errorcode;
+
+      // Check for actual error (errorCode > 0 means error, 0 means success)
+      if (errorCode !== undefined && errorCode !== 0 && errorCode !== '0') {
+        resultContent.innerHTML = `
+          <div class="result-error">
+            <h3>❌ Tokenization Failed</h3>
+            <p><strong>Error Code:</strong> ${errorCode}</p>
+            <p><strong>Message:</strong> ${response.errorMessage || response.message || 'Unknown error'}</p>
+          </div>
+        `;
+        resultSection.classList.add('error');
+        resultSection.classList.remove('success');
+        return;
+      }
+
+
+      // Extract token - could be in 'token' field or 'message' field (when errorCode is 0)
+      const token = response.token || response.message;
+
+      // Check for token (valid tokens are 13+ characters)
+      if (token && token.length >= 13) {
+
+        resultContent.innerHTML = `
+          <div class="result-success">
+            <h3>✅ Tokenization Successful!</h3>
+            <div class="result-details">
+              <div class="result-item">
+                <label>Token:</label>
+                <code id="tokenValue">${token}</code>
+                <button class="btn-copy" onclick="copyToken()">📋 Copy</button>
+              </div>
+              ${response.expiry ? `
+              <div class="result-item">
+                <label>Expiry:</label>
+                <code>${response.expiry}</code>
+              </div>
+              ` : ''}
+              ${response.binInfo ? `
+              <div class="result-item">
+                <label>Card Brand:</label>
+                <code>${response.binInfo.brand || 'Unknown'}</code>
+              </div>
+              ` : ''}
+            </div>
+            <p class="hint">Use this token in your authorization request with the CardPointe Gateway API.</p>
+          </div>
+        `;
+        resultSection.classList.add('success');
+        resultSection.classList.remove('error');
+      } else {
+        // Handle other response types (validation, etc.)
+        console.log('Other response type:', response);
+      }
+    }
+
+    // Copy token to clipboard
+    function copyToken() {
+      const tokenValue = document.getElementById('tokenValue');
+      if (tokenValue) {
+        navigator.clipboard.writeText(tokenValue.textContent).then(function () {
+          alert('Token copied to clipboard!');
+        });
+      }
+    }
+  </script>
+</body>
+
+</html>
