@@ -1,21 +1,41 @@
 /**
  * CardPointe Gateway API Configuration
- * UAT Environment Credentials
+ * Reads from environment variables (.env file)
  */
 
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = [
+    'CARDPOINTE_API_URL',
+    'CARDPOINTE_USERNAME',
+    'CARDPOINTE_PASSWORD',
+    'CARDPOINTE_MERCHANT_ID',
+    'CARDPOINTE_TOKENIZER_URL',
+] as const;
+
+for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+        throw new Error(`Missing required environment variable: ${envVar}`);
+    }
+}
+
 export const config = {
-    // API Base URL (UAT Environment)
-    apiBaseUrl: 'https://fts-uat.cardconnect.com/cardconnect/rest',
+    // API Base URL
+    apiBaseUrl: process.env.CARDPOINTE_API_URL!,
 
     // Authentication credentials
-    username: 'testing',
-    password: 'testing123',
+    username: process.env.CARDPOINTE_USERNAME!,
+    password: process.env.CARDPOINTE_PASSWORD!,
 
     // Merchant ID
-    merchantId: '800000050032',
+    merchantId: process.env.CARDPOINTE_MERCHANT_ID!,
 
     // iFrame Tokenizer URL (for frontend)
-    tokenizerUrl: 'https://fts-uat.cardconnect.com/itoke/ajax-tokenizer.html',
+    tokenizerUrl: process.env.CARDPOINTE_TOKENIZER_URL!,
 
     // Generate Base64 encoded auth header
     get authHeader(): string {
