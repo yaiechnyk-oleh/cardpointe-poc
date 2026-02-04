@@ -1,14 +1,7 @@
-/**
- * CardPointe Gateway API Configuration
- * Reads from environment variables (.env file)
- */
-
 import * as dotenv from 'dotenv';
 
-// Load environment variables from .env file
 dotenv.config();
 
-// Validate required environment variables
 const requiredEnvVars = [
     'CARDPOINTE_API_URL',
     'CARDPOINTE_USERNAME',

@@ -22,7 +22,7 @@ async function runDemo() {
     // ═══════════════════════════════════════════════════════════════
     // STEP 1: Create L3 Line Items
     // ═══════════════════════════════════════════════════════════════
-    console.log('\n📋 STEP 1: Preparing L3 Line Items...\n');
+    console.log('\nSTEP 1: Preparing L3 Line Items...\n');
 
     const lineItems: L3LineItem[] = [
         {
@@ -66,7 +66,7 @@ async function runDemo() {
     // STEP 2: Authorization with L2/L3 Data
     // ═══════════════════════════════════════════════════════════════
     console.log('\n═══════════════════════════════════════════════════════════════');
-    console.log('📋 STEP 2: Authorizing Payment with L2/L3 Data...');
+    console.log('STEP 2: Authorizing Payment with L2/L3 Data...');
     console.log('═══════════════════════════════════════════════════════════════');
 
     try {
@@ -105,7 +105,7 @@ async function runDemo() {
             phone: '5551234567',
         });
 
-        console.log('\n✅ Authorization Result:');
+        console.log('\nAuthorization Result:');
         console.log('─────────────────────────────────────────────────────────────');
         console.log(`  Status:           ${authResponse.respstat === 'A' ? '✅ APPROVED' : '❌ ' + authResponse.respstat}`);
         console.log(`  Response Code:    ${authResponse.respcode}`);
@@ -124,12 +124,12 @@ async function runDemo() {
             // STEP 3: Inquire Transaction Status
             // ═══════════════════════════════════════════════════════════════
             console.log('\n═══════════════════════════════════════════════════════════════');
-            console.log('📋 STEP 3: Inquiring Transaction Status...');
+            console.log('STEP 3: Inquiring Transaction Status...');
             console.log('═══════════════════════════════════════════════════════════════');
 
             const inquireResponse = await client.inquire(authResponse.retref);
 
-            console.log('\n📊 Transaction Status:');
+            console.log('\nTransaction Status:');
             console.log('─────────────────────────────────────────────────────────────');
             console.log(`  Reference #:      ${inquireResponse.retref}`);
             console.log(`  Amount:           $${inquireResponse.amount}`);
