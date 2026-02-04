@@ -31,9 +31,7 @@
           </div>
         </div>
 
-        <button id="tokenizeBtn" class="btn-primary" onclick="getToken()">
-          🔐 Tokenize Card
-        </button>
+
       </section>
 
       <section class="result-section" id="resultSection">
@@ -47,7 +45,7 @@
         <h3>ℹ️ How It Works</h3>
         <ol>
           <li>Card data is entered in the <strong>secure CardPointe iFrame</strong></li>
-          <li>When you click "Tokenize", the iFrame sends the card data directly to CardPointe</li>
+          <li>After a brief pause in typing, the iFrame <strong>automatically tokenizes</strong> the card data</li>
           <li>CardPointe returns a <strong>token</strong> that represents the card</li>
           <li>Your application receives only the token - never the actual card number</li>
           <li>Use this token for payment processing via the CardPointe Gateway API</li>
@@ -119,53 +117,45 @@
           response = event.data;
         }
       } catch (e) {
-        // Handle non-JSON messages (validation events)
+        // Handle non-JSON messages (validation events) - clear result when user re-inputs
         console.log('Validation event:', event.data);
+        clearResult();
         return;
       }
 
       displayResult(response);
     }, false);
 
-    // Request token from the iFrame
-    function getToken() {
-      const tokenFrame = document.getElementById('tokenFrame');
-
-      // Post message to iFrame requesting tokenization
-      tokenFrame.contentWindow.postMessage('getToken', 'https://fts-uat.cardconnect.com');
-
-      // Update button state
-      const btn = document.getElementById('tokenizeBtn');
-      btn.disabled = true;
-      btn.textContent = '⏳ Tokenizing...';
-
-      // Reset after timeout if no response
-      setTimeout(function () {
-        btn.disabled = false;
-        btn.textContent = '🔐 Tokenize Card';
-      }, 5000);
+    // Clear the result section when user re-inputs data
+    function clearResult() {
+      const resultContent = document.getElementById('resultContent');
+      const resultSection = document.getElementById('resultSection');
+      resultContent.innerHTML = '<p class="waiting">Waiting for tokenization...</p>';
+      resultSection.classList.remove('success', 'error');
     }
 
     // Display the tokenization result
     function displayResult(response) {
       const resultContent = document.getElementById('resultContent');
       const resultSection = document.getElementById('resultSection');
-      const btn = document.getElementById('tokenizeBtn');
-
-      // Reset button
-      btn.disabled = false;
-      btn.textContent = '🔐 Tokenize Card';
 
       // Get error code (could be errorCode or errorcode)
       const errorCode = response.errorCode !== undefined ? response.errorCode : response.errorcode;
+      const errorMessage = response.errorMessage || response.message || '';
 
       // Check for actual error (errorCode > 0 means error, 0 means success)
       if (errorCode !== undefined && errorCode !== 0 && errorCode !== '0') {
+        // If it's a "required" validation error (empty fields), show waiting state instead
+        if (errorMessage.toLowerCase().includes('required')) {
+          clearResult();
+          return;
+        }
+
         resultContent.innerHTML = `
           <div class="result-error">
             <h3>❌ Tokenization Failed</h3>
             <p><strong>Error Code:</strong> ${errorCode}</p>
-            <p><strong>Message:</strong> ${response.errorMessage || response.message || 'Unknown error'}</p>
+            <p><strong>Message:</strong> ${errorMessage || 'Unknown error'}</p>
           </div>
         `;
         resultSection.classList.add('error');

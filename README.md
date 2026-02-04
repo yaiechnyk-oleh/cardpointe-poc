@@ -9,6 +9,7 @@ A proof-of-concept demonstrating CardPointe Gateway integration with:
 | Feature | Description |
 |---------|-------------|
 | **Secure Tokenization** | Card data never touches your server - entered directly in CardPointe's hosted iFrame |
+| **Auto-Tokenization** | iFrame automatically tokenizes card data after a brief pause in typing (no button click required) |
 | **L2/L3 Data Support** | Enhanced transaction data for commercial cards (purchase orders, line items, tax info) |
 | **TypeScript Client** | Fully typed API client for CardPointe Gateway REST API |
 | **Dark Theme UI** | Modern, production-ready frontend design |
@@ -144,18 +145,40 @@ sequenceDiagram
     participant CardPointe iFrame
     participant CardPointe API
     
-    User->>Frontend: Enter card details
-    Frontend->>CardPointe iFrame: Card data (secure iFrame)
-    CardPointe iFrame->>CardPointe API: Send card for tokenization
+    User->>CardPointe iFrame: Enter card details
+    Note over CardPointe iFrame: User stops typing (2s inactivity)
+    CardPointe iFrame->>CardPointe API: Auto-send card for tokenization
     CardPointe API-->>CardPointe iFrame: Return token
     CardPointe iFrame-->>Frontend: postMessage(token)
     Frontend->>User: Display token
 ```
 
 1. User enters card data in the **secure CardPointe iFrame**
-2. iFrame sends data directly to CardPointe (never touches your server)
+2. After a brief pause in typing (2 seconds), the iFrame **automatically tokenizes** the card
 3. CardPointe returns a **token** representing the card
 4. Your app uses this token for subsequent API calls
+
+### iFrame Configuration
+
+The iFrame is configured with the following key parameters:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `useexpiry` | `true` | Enable expiry date field |
+| `usecvv` | `true` | Enable CVV field |
+| `enhancedresponse` | `true` | Return BIN info and expiry with token |
+| `tokenizewheninactive` | `false` | Auto-tokenize after inactivity timeout |
+| `inactivityto` | `2000` | 2 second inactivity timeout |
+| `formatinput` | `true` | Auto-format card number with spaces |
+| `invalidcreditcardevent` | `true` | Emit events for invalid card numbers |
+
+### Frontend Event Handling
+
+The frontend listens for `postMessage` events from the iFrame:
+
+- **Tokenization success**: Displays token, expiry, and card brand
+- **Tokenization error**: Shows error message (except for empty field validation)
+- **Validation events**: Clears the result section when user re-inputs data
 
 ### Backend Authorization Flow
 
@@ -203,6 +226,7 @@ const response = await client.authorize({
             lineno: '1',
             description: 'Premium Widget',
             quantity: '2',
+            uom: 'each',
             unitcost: '10.00',
             netamnt: '20.00',
             taxamnt: '1.80',
@@ -220,7 +244,67 @@ const status = await client.inquire('035246114225');
 const capture = await client.capture('035246114225');
 
 // Void transaction
-const void = await client.void('035246114225');
+const voidResult = await client.void('035246114225');
+```
+
+---
+
+## 📦 TypeScript Interfaces
+
+The client provides strongly-typed interfaces for all API operations:
+
+### L3LineItem
+```typescript
+interface L3LineItem {
+    lineno: string;          // Line item number
+    description: string;     // Item description
+    quantity: string;        // Quantity
+    uom: string;             // Unit of measure
+    unitcost: string;        // Cost per unit
+    netamnt: string;         // Net amount
+    taxamnt: string;         // Tax amount
+    discamnt?: string;       // Discount amount (optional)
+    upc?: string;            // Universal Product Code (optional)
+}
+```
+
+### AuthorizationRequest
+```typescript
+interface AuthorizationRequest {
+    // Required
+    merchid: string;
+    amount: string;
+    
+    // Card data
+    account?: string;        // Card number or token
+    expiry?: string;         // MMYY format
+    cvv2?: string;
+    
+    // Level 2 Data
+    ponumber?: string;       // Purchase order number
+    taxamnt?: string;        // Total tax amount
+    
+    // Level 3 Data
+    shiptozip?: string;      // Shipping ZIP
+    orderdate?: string;      // YYYYMMDD format
+    items?: L3LineItem[];    // Line items
+    
+    // Billing info...
+}
+```
+
+### AuthorizationResponse
+```typescript
+interface AuthorizationResponse {
+    respstat: 'A' | 'B' | 'C';  // A=Approved, B=Retry, C=Declined
+    respcode: string;
+    resptext: string;
+    retref: string;              // Transaction reference
+    token: string;               // CardSecure token
+    amount: string;
+    authcode?: string;
+    commcard?: string;           // Commercial card indicator
+}
 ```
 
 ---
